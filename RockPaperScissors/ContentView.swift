@@ -8,15 +8,23 @@
 import SwiftUI
 
 struct ContentView: View {
-    private var moves = ["Scissors": "✂️", "Rock": "🪨", "Paper": "📄"]
-    
+    private let winMap = ["Scissors": "Paper", "Paper": "Rock", "Rock": "Scissors"]
+    private let moves = ["Scissors": "✂️", "Rock": "🪨", "Paper": "📄"]
+        
     @State private var shouldWin: Bool
     @State private var cpuChoice: String
     @State private var score = 0
+    @State private var answered = 0
+    
+    @State private var scoreAlertTitle = ""
+    @State private var scoreAlertSubtitle = ""
+    
+    @State private var showScoreAlert = false
+    @State private var showRestartAlert = false
     
     init() {
         self.shouldWin = Bool.random()
-        self.cpuChoice = moves.values.randomElement()!
+        self.cpuChoice = moves.keys.randomElement()!
     }
     
     var body: some View {
@@ -33,7 +41,8 @@ struct ContentView: View {
                 Spacer()
                 
                 // CPU move
-                Text(cpuChoice).font(.system(size: 50))
+                Text(moves[cpuChoice]!).font(.system(size: 50))
+                Spacer()
                 
                 // Win/Lose
                 // Play a winning move/Play a losing move
@@ -44,10 +53,11 @@ struct ContentView: View {
                 HStack {
                     ForEach(moves.keys.sorted(), id: \.self) { key in
                         Button {
-                            print("Clicked \(key)")
+                            handlePlayerChoice(key)
+                            handleNextMove()
                         } label: {
                             VStack {
-                                Text(moves[key] ?? "Uh oh").font(.title)
+                                Text(moves[key]!).font(.title)
                                 Text(key).foregroundStyle(.black).font(.title3)
                             }
                             .frame(maxWidth: .infinity)
@@ -55,10 +65,38 @@ struct ContentView: View {
                             .background(.ultraThinMaterial)
                             .clipShape(.rect(cornerRadius: 20))
                         }
+                        .alert(isPresented: $showScoreAlert) {
+                            Alert(title: Text(scoreAlertTitle), message: Text(scoreAlertSubtitle), dismissButton: .default(Text("OK")))
+                        }
                     }
                 }.padding()
                 Spacer()
             }
+        }
+    }
+    
+    func handlePlayerChoice(_ choice: String) {
+        let shouldScore = (shouldWin && winMap[choice] == cpuChoice) || (!shouldWin && winMap[cpuChoice] == choice)
+        // did what was asked
+        if shouldScore {
+            score += 1
+            scoreAlertTitle = "Nice!"
+            scoreAlertSubtitle = "Your score is \(score)"
+        }
+        // chose the same as the CPU or did opposite of what was asked
+        else {
+            scoreAlertTitle = "Try again..."
+            scoreAlertSubtitle = "Your score is \(score)"
+        }
+        
+        answered += 1
+    }
+    
+    func handleNextMove() {
+        if answered == 10 {
+            showRestartAlert = true
+        } else {
+            showScoreAlert = true
         }
     }
 }
@@ -69,7 +107,7 @@ struct MovePrompt: View {
     
     var body: some View {
         Group {
-            Text("Play a ") + Text(promptText).foregroundStyle(isWinningMove ? .green : .red) + Text(" move against the above move")
+            Text("Play a ") + Text(promptText).foregroundStyle(isWinningMove ? .green : .red) + Text(" move against the move shown above")
         }
         .font(.title.bold())
         .multilineTextAlignment(.center)
